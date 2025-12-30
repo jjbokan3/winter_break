@@ -3,4 +3,12 @@ name = "winter-break"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "boto3>=1.42.18",
+    "pandas>=2.3.3",
+    "polars>=1.36.1",
+    "prefect>=3.6.8",
+    "pulumi>=3.214.0",
+    "pydantic>=2.12.5",
+    "streamlit>=1.52.2",
+]
