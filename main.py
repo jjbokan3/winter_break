@@ -1,9 +1,6 @@
 from prefect import flow, task, get_run_logger
 from prefect.blocks.notifications import DiscordWebhook
 
-discord_webhook_block = DiscordWebhook.load("discord")
-
-discord_webhook_block.notify("Hello from Prefect!")
 
 @task()
 def text():
@@ -16,6 +13,9 @@ def adding():
 
 @flow(timeout_seconds=600)
 def my_flow():
+    discord_webhook_block = DiscordWebhook.load("discord")
+
+    discord_webhook_block.notify("Hello from Prefect!")
     logger = get_run_logger()
     logger.info("Hello, world!")
     logger.error("Yikes")
