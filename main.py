@@ -19,10 +19,9 @@ def my_flow():
     logger.info("Hello again!")
     text()
     adding()
+    raise Exception("This is an error!")
     print("Hello, world!")
 
 
 if __name__ == "__main__":
     my_flow()
-
-https://discord.com/api/webhooks/1455653451487772745/YJsGOa3BwRKPHwrHtmv1bTJ7HbTzBz9Db9HUsDm29k1Qvyya8xZ_Hlc4Tc1K-e6rxToh
