@@ -16,9 +16,10 @@ pull:
 
 # deployment definitions
 deployments:
-- name: my-first-deployment
+- name: every-5-min
   entrypoint: main.py:my_flow
   work_pool:
     name: my-work-pool
-    work_queue_name: default
-  schedule: null
+  schedule:
+    cron: "*/5 * * * *"
+    timezone: "America/New_York"
