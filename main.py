@@ -1,16 +1,22 @@
-from prefect import flow, task
+from prefect import flow, task, get_run_logger
 
-@task(log_prints=True)
+@task()
 def text():
     print("WHAT UP")
 
-@task(log_prints=True)
+@task()
 def adding():
     print(10+10)
     return 100
 
-@flow(log_prints=True)
+@flow()
 def my_flow():
+    logger = get_run_logger()
+    logger.info("Hello, world!")
+    logger.error("Yikes")
+    logger.debug("Debug message")
+    logger.warning("Warning!")
+    logger.info("Hello again!")
     text()
     adding()
     print("Hello, world!")
