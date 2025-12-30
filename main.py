@@ -19,7 +19,6 @@ def my_flow():
     logger.info("Hello again!")
     text()
     adding()
-    raise Exception("This is an error!")
     print("Hello, world!")
 
 
