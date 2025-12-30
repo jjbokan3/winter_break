@@ -23,3 +23,10 @@ deployments:
   schedule:
     cron: "*/5 * * * *"
     timezone: "America/New_York"
+- name: assets_demo
+  entrypoint: assets_demo.py:assets_demo_flow
+  work_pool:
+    name: my-work-pool
+  schedule:
+    cron: "*/5 * * * *"
+    timezone: "America/New_York"
