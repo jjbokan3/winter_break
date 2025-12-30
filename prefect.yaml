@@ -10,8 +10,9 @@ push: null
 
 # pull section defines how the worker gets your code
 pull:
-- prefect.deployments.steps.set_working_directory:
-    directory: /Users/jjbokan3/winter_break
+- prefect.deployments.steps.git_clone:
+    repository: https://github.com/jjbokan3/winter_break.git
+    branch: main
 
 # deployment definitions
 deployments:
