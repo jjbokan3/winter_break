@@ -1,4 +1,9 @@
 from prefect import flow, task, get_run_logger
+from prefect.blocks.notifications import DiscordWebhook
+
+discord_webhook_block = DiscordWebhook.load("discord")
+
+discord_webhook_block.notify("Hello from Prefect!")
 
 @task()
 def text():
