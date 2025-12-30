@@ -1,0 +1,28 @@
+name: Deploy Prefect Flows
+
+on:
+  push:
+    branches:
+      - main  # Runs whenever you push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Prefect Deploy
+        env:
+          PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
+          PREFECT_API_URL: https://api.prefect.cloud/api/accounts/5df67a48-ca49-4577-802e-d32805d70626/workspaces/18378a96-48ac-4d6b-9ac4-475e568d562e
+        run: uv run prefect deploy --all
