@@ -11,7 +11,7 @@ push: null
 # pull section defines how the worker gets your code
 pull:
 - prefect.deployments.steps.set_working_directory:
-    directory: /path/to/your/winter_break
+    directory: /Users/jjbokan3/winter_break
 
 # deployment definitions
 deployments:
