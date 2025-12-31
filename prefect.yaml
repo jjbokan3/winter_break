@@ -11,13 +11,16 @@ push: null
 # pull section defines how the worker gets your code
 pull:
 - prefect.deployments.steps.git_clone:
+    id: clone-step  # Added an ID so we can reference it
     repository: https://github.com/jjbokan3/winter_break.git
     branch: main
 
-# REPLACE THE OLD PIP STEP WITH THIS:
 - prefect.deployments.steps.run_shell_script:
     id: install-dependencies
     script: |
+      # Move into the directory where the code was actually cloned
+      cd {{ clone-step.directory }}
+      
       pip install uv
       uv pip install --system -r pyproject.toml
     stream_output: true
