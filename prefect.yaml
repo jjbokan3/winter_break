@@ -19,7 +19,6 @@ pull:
 - prefect.deployments.steps.pip_install_requirements:
     directory: "{{ clone-step.directory }}"
     requirements_file: requirements.txt
-    pip_install_options: "--prefer-binary --only-binary :all:"
 
 # deployment definitions
 deployments:
