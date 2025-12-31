@@ -9,6 +9,7 @@ dependencies = [
     "pandas>=2.3.3",
     "polars>=1.36.1",
     "prefect>=3.6.8",
+    "prefect-aws>=0.5.13",
     "pulumi>=3.214.0",
     "pulumi-aws>=7.15.0",
     "pydantic>=2.12.5",

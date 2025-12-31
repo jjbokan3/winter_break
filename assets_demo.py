@@ -4,7 +4,8 @@ from prefect import flow
 from prefect.assets import materialize
 
 
-@materialize("file://./prefect-assets-demo/raw.txt")
+# @materialize("file://./prefect-assets-demo/raw.txt")
+@asset
 def make_raw() -> str:
     path = Path("prefect-assets-demo/raw.txt")
     path.parent.mkdir(parents=True, exist_ok=True)

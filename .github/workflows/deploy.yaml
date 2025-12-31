@@ -1,13 +1,22 @@
-name: Deploy Prefect Flows
+name: Deploy Infrastructure & Flows
 
 on:
   push:
     branches:
-      - main  # Runs whenever you push to the main branch
+      - main
 
 jobs:
-  deploy:
+  infra_and_deploy:
     runs-on: ubuntu-latest
+    env:
+      # Secrets configured in GitHub Repo Settings
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
+      # Adjust this URL to your specific workspace
+      PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,11 +27,46 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: uv sync
 
-      - name: Prefect Deploy
+      - name: Pulumi Up
+        uses: pulumi/actions@v6
+        with:
+          command: up
+          stack-name: dev
+          work-dir: ./pulumi
         env:
-          PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
-          PREFECT_API_URL: https://api.prefect.cloud/api/accounts/5df67a48-ca49-4577-802e-d32805d70626/workspaces/18378a96-48ac-4d6b-9ac4-475e568d562e
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      # --- TRICK: Get Pulumi Outputs for the Next Step ---
+      - name: Get Pulumi Outputs
+        id: pulumi_out
+        run: |
+          # Use pulumi stack output to get values
+          # We use ::add-mask:: to prevent secrets from showing in logs
+          
+          cd pulumi
+          
+          ACCESS_KEY=$(pulumi stack output aws_access_key_id --show-secrets)
+          echo "::add-mask::$ACCESS_KEY"
+          echo "ACCESS_KEY=$ACCESS_KEY" >> $GITHUB_ENV
+          
+          SECRET_KEY=$(pulumi stack output aws_secret_access_key --show-secrets)
+          echo "::add-mask::$SECRET_KEY"
+          echo "SECRET_KEY=$SECRET_KEY" >> $GITHUB_ENV
+          
+          BUCKET_NAME=$(pulumi stack output bucket_name)
+          echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
+
+      - name: Sync Prefect Blocks
+        run: |
+          # Pass the env vars we just captured to the python script
+          export PULUMI_OUTPUT_ACCESS_KEY="${{ env.ACCESS_KEY }}"
+          export PULUMI_OUTPUT_SECRET_KEY="${{ env.SECRET_KEY }}"
+          export PULUMI_OUTPUT_BUCKET_NAME="${{ env.BUCKET_NAME }}"
+          
+          uv run python sync_blocks.py
+
+      - name: Prefect Deploy
         run: uv run prefect deploy --all
