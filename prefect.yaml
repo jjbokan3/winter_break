@@ -15,16 +15,9 @@ pull:
     repository: https://github.com/jjbokan3/winter_break.git
     branch: main
 
-- prefect.deployments.steps.run_shell_script:
-    id: install-dependencies
-    script: |
-      # Move into the directory where the code was actually cloned
-      cd {{ clone-step.directory }}
-      
-      pip install uv
-      uv pip install --system -r pyproject.toml
-    stream_output: true
-
+- prefect.deployments.steps.pip_install_requirements:
+    directory: "{{ clone-step.directory }}" # `clone-step` is a user-provided `id` field
+    requirements_file: requirements.txt
 
 # deployment definitions
 deployments:
