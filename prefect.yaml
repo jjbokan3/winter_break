@@ -17,7 +17,7 @@ pull:
 # deployment definitions
 deployments:
 - name: every-5-min
-  entrypoint: main.py:my_flow
+  entrypoint: main.py:my_data_flow
   work_pool:
     name: my-work-pool
   schedule:
