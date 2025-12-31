@@ -1,9 +1,10 @@
 from prefect import flow, task, get_run_logger
+from prefect.assets import materialize
 from prefect_aws import S3Bucket
 import pandas as pd
 
 
-@task
+@materialize("s3://my-data-bucket/hello_from_prefect.txt")
 def upload_data():
     logger = get_run_logger()
 
@@ -15,6 +16,7 @@ def upload_data():
         # Example usage:
         s3_block.write_path("hello_from_prefect.txt", b"Hello World!")
         logger.info("Uploaded file to S3!")
+        return "s3://my-data-bucket/hello_from_prefect.txt"
 
     except ValueError:
         logger.error("❌ S3 Block not found! Did the GitHub Action run successfully?")
