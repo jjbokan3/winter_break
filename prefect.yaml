@@ -14,12 +14,8 @@ pull:
     repository: https://github.com/jjbokan3/winter_break.git
     branch: main
 
-- prefect.deployments.steps.run_shell_script:
-    id: install-dependencies
-    script: |
-      pip install uv
-      uv export --format requirements-txt > requirements.txt
-      pip install -r requirements.txt
+- prefect.deployments.steps.pip_install_requirements:
+    requirements_file: requirements.txt
     stream_output: true
 
 # deployment definitions
