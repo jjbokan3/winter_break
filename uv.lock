@@ -2037,6 +2037,10 @@ source = { virtual = "." }
 dependencies = [
     { name = "prefect" },
     { name = "prefect-aws" },
+]
+
+[package.optional-dependencies]
+dev = [
     { name = "pulumi" },
     { name = "pulumi-aws" },
 ]
@@ -2045,9 +2049,10 @@ dependencies = [
 requires-dist = [
     { name = "prefect", specifier = ">=3.6.8" },
     { name = "prefect-aws", specifier = ">=0.5.13" },
-    { name = "pulumi", specifier = ">=3.214.0" },
-    { name = "pulumi-aws", specifier = ">=7.15.0" },
+    { name = "pulumi", marker = "extra == 'dev'", specifier = ">=3.214.0" },
+    { name = "pulumi-aws", marker = "extra == 'dev'", specifier = ">=7.15.0" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "wrapt"
