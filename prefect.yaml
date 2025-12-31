@@ -1,3 +1,4 @@
+
 # Welcome to your prefect.yaml file!
 name: winter-break
 prefect-version: 3.6.8
@@ -11,13 +12,14 @@ push: null
 # pull section defines how the worker gets your code
 pull:
 - prefect.deployments.steps.git_clone:
-    id: clone-step  # Added an ID so we can reference it
+    id: clone-step
     repository: https://github.com/jjbokan3/winter_break.git
     branch: main
 
 - prefect.deployments.steps.pip_install_requirements:
-    directory: "{{ clone-step.directory }}" # `clone-step` is a user-provided `id` field
+    directory: "{{ clone-step.directory }}"
     requirements_file: requirements.txt
+    pip_install_options: "--prefer-binary --only-binary :all:"
 
 # deployment definitions
 deployments:
@@ -26,14 +28,17 @@ deployments:
   work_pool:
     name: my-work-pool
     job_variables:
-      image: "{{ $PREFECT_IMAGE_NAME }}:{{ $PREFECT_IMAGE_TAG }}"
+      image: "prefecthq/prefect-client:3-latest"
   schedule:
     cron: "*/5 * * * *"
     timezone: "America/New_York"
+
 - name: assets_demo
   entrypoint: assets_demo.py:assets_demo_flow
   work_pool:
     name: my-work-pool
+    job_variables:
+      image: "prefecthq/prefect-client:3-latest"
   schedule:
     cron: "*/5 * * * *"
     timezone: "America/New_York"
