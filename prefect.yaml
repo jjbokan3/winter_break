@@ -28,9 +28,8 @@ deployments:
     name: my-work-pool
     job_variables:
       image: "prefecthq/prefect-client:3-latest"
-  schedule:
-    cron: "*/5 * * * *"
-    timezone: "America/New_York"
+      pip_packages: ["pandas", "polars"]
+
 
 - name: assets_demo
   entrypoint: assets_demo.py:assets_demo_flow
@@ -38,6 +37,3 @@ deployments:
     name: my-work-pool
     job_variables:
       image: "prefecthq/prefect-client:3-latest"
-  schedule:
-    cron: "*/5 * * * *"
-    timezone: "America/New_York"
