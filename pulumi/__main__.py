@@ -37,6 +37,32 @@ aws.iam.UserPolicyAttachment("prefect-policy-attachment",
 # These are the actual credentials Prefect will need
 access_key = aws.iam.AccessKey("prefect-keys", user=prefect_user.name)
 
+repo = aws.ecr.Repository(
+    "prefect-flow-repo",
+    force_delete=True,  # optional for dev; be careful in prod
+)
+
+# Optional: lifecycle policy to keep latest N images
+aws.ecr.LifecyclePolicy(
+    "prefect-flow-repo-lifecycle",
+    repository=repo.name,
+    policy="""{
+      "rules": [{
+        "rulePriority": 1,
+        "description": "Keep last 50 images",
+        "selection": {
+          "tagStatus": "any",
+          "countType": "imageCountMoreThan",
+          "countNumber": 50
+        },
+        "action": { "type": "expire" }
+      }]
+    }""",
+)
+
+pulumi.export("ecr_repo_url", repo.repository_url)
+pulumi.export("ecr_repo_name", repo.name)
+
 # 6. Export everything
 pulumi.export("bucket_name", bucket.id)
 pulumi.export("aws_access_key_id", access_key.id)

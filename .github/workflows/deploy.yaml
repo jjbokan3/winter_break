@@ -58,6 +58,25 @@ jobs:
           
           BUCKET_NAME=$(pulumi stack output bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
+          
+          ECR_REPO_URL=$(pulumi stack output ecr_repo_url)
+          echo "ECR_REPO_URL=$ECR_REPO_URL" >> $GITHUB_ENV
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | \
+            docker login --username AWS --password-stdin ${{ env.ECR_REPO_URL }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          docker build -t ${{ env.ECR_REPO_URL }}:$IMAGE_TAG .
+          docker tag ${{ env.ECR_REPO_URL }}:$IMAGE_TAG ${{ env.ECR_REPO_URL }}:latest
+          docker push ${{ env.ECR_REPO_URL }}:$IMAGE_TAG
+          docker push ${{ env.ECR_REPO_URL }}:latest
+          
+          # Make the image tag available for Prefect deploy
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Sync Prefect Blocks
         run: |

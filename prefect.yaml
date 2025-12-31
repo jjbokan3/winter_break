@@ -25,6 +25,8 @@ deployments:
   entrypoint: main.py:my_data_flow
   work_pool:
     name: my-work-pool
+    job_variables:
+      image: "{{ $PREFECT_IMAGE_NAME }}:{{ $PREFECT_IMAGE_TAG }}"
   schedule:
     cron: "*/5 * * * *"
     timezone: "America/New_York"
