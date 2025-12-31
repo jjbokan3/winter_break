@@ -1,5 +1,6 @@
 from prefect import flow, task, get_run_logger
 from prefect_aws import S3Bucket
+import pandas as pd
 
 
 @task
