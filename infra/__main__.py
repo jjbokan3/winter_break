@@ -324,20 +324,6 @@ prefect_task_definition = aws.ecs.TaskDefinition(
     ),
 )
 
-# --- ECS Service for Prefect Server ---
-prefect_service = aws.ecs.Service(
-    "prefect-server-service",
-    cluster=ecs_cluster.arn,
-    task_definition=prefect_task_definition.arn,
-    desired_count=1,
-    launch_type="FARGATE",
-    network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
-        assign_public_ip=associate_public_ip,  # Set to True if you want to access Prefect UI from internet
-        subnets=[subnet_id],
-        security_groups=[sg_ecs_tasks.id],
-    ),
-)
-
 # --- Update ECS Security Group to allow access to Prefect UI ---
 sg_prefect_ingress = aws.ec2.SecurityGroupRule(
     "prefect-ui-access-sg",
