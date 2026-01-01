@@ -51,6 +51,9 @@ jobs:
         id: get-ips
         working-directory: ./infra
         run: |
+          # Set AWS region for all commands
+          export AWS_DEFAULT_REGION=us-east-2
+          
           # Get Pulumi outputs
           CLICKHOUSE_IP=$(pulumi stack output clickhouse_private_ip)
           ECS_CLUSTER=$(pulumi stack output ecs_cluster_name)
