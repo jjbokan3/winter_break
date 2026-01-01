@@ -49,7 +49,7 @@ jobs:
 
       - name: Get Infrastructure IPs
         id: get-ips
-        working-directory: infra
+        working-directory: ./infra
         run: |
           # Get Pulumi outputs
           CLICKHOUSE_IP=$(pulumi stack output clickhouse_private_ip)
