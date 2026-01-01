@@ -57,6 +57,7 @@ jobs:
           # Get Pulumi outputs
           CLICKHOUSE_IP=$(pulumi stack output clickhouse_private_ip)
           ECS_CLUSTER=$(pulumi stack output ecs_cluster_name)
+          SERVICE_NAME=$(pulumi stack output prefect_service_name)
           
           # Get Prefect task IP
           TASK_ARN=$(aws ecs list-tasks \
