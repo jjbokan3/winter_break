@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
+    "ipykernel>=7.1.0",
+    "massive>=2.0.3",
     "prefect>=3.6.8",
     "prefect-aws>=0.5.13",
 ]

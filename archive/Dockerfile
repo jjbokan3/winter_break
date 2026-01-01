@@ -10,12 +10,12 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Install uv + deps first (better caching)
-COPY pyproject.toml uv.lock ./
+COPY ../pyproject.toml uv.lock ./
 RUN pip install --no-cache-dir uv \
     && uv sync --frozen --no-dev
 
 # Copy your project after deps are installed
-COPY . .
+COPY .. .
 
 # Prefect will run your flow entrypoint; keep container alive-ready
 # (command can be overridden by Prefect job variables)

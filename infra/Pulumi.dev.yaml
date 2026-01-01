@@ -1,0 +1,7 @@
+config:
+  aws:region: us-east-2
+  winter-project:vpcId: vpc-0c0063e8ad730c774
+  winter-project:sshCidr: 72.76.166.39/32
+  winter-project:associatePublicIp: "true"
+  winter-project:clickhouseDataVolumeGb: "75"
+  winter-project:keyName: my-clickhouse-key

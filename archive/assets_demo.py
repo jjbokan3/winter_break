@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from prefect import flow
+from prefect.context import get_run_context
 from prefect.assets import materialize
 
 

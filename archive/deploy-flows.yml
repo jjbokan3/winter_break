@@ -1,0 +1,83 @@
+name: Deploy Prefect Flows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'flows/**'
+      - 'deploy-flows.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-flows:
+    name: Deploy Flows to Prefect
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install prefect clickhouse-connect
+          pip install -r flows/requirements.txt || echo "No flows/requirements.txt found"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Get Prefect Server IP
+        id: get-prefect-ip
+        run: |
+          TASK_ARN=$(aws ecs list-tasks \
+            --cluster prefect-cluster \
+            --service-name prefect-server-service \
+            --query 'taskArns[0]' \
+            --output text)
+          
+          ENI_ID=$(aws ecs describe-tasks \
+            --cluster prefect-cluster \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text)
+          
+          PREFECT_IP=$(aws ec2 describe-network-interfaces \
+            --network-interface-ids $ENI_ID \
+            --query 'NetworkInterfaces[0].Association.PublicIp' \
+            --output text)
+          
+          echo "prefect_ip=$PREFECT_IP" >> $GITHUB_OUTPUT
+          echo "✅ Prefect API: http://$PREFECT_IP:4200/api"
+
+      - name: Deploy Flows
+        env:
+          PREFECT_API_URL: http://${{ steps.get-prefect-ip.outputs.prefect_ip }}:4200/api
+        run: |
+          # Deploy all flows in the flows directory
+          if [ -d "flows" ]; then
+            for flow_file in flows/*.py; do
+              if [ -f "$flow_file" ]; then
+                echo "Deploying $flow_file..."
+                prefect deploy "$flow_file" --all || echo "⚠️ Failed to deploy $flow_file"
+              fi
+            done
+          else
+            echo "No flows directory found"
+          fi
+
+      - name: List Deployments
+        env:
+          PREFECT_API_URL: http://${{ steps.get-prefect-ip.outputs.prefect_ip }}:4200/api
+        run: |
+          echo "### Deployed Flows" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          prefect deployment ls >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

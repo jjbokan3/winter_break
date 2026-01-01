@@ -1,0 +1,162 @@
+name: Deploy Infrastructure and Configure Prefect
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/deploy-infrastructure.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy-infra:
+    name: Deploy Infrastructure with Pulumi
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: infra
+
+    outputs:
+      prefect_public_ip: ${{ steps.get-ips.outputs.prefect_ip }}
+      clickhouse_private_ip: ${{ steps.get-ips.outputs.clickhouse_ip }}
+      ecs_cluster: ${{ steps.get-ips.outputs.ecs_cluster }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Deploy with Pulumi
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: dev
+          work-dir: infra
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Get Infrastructure IPs
+        id: get-ips
+        working-directory: infra
+        run: |
+          # Get Pulumi outputs
+          CLICKHOUSE_IP=$(pulumi stack output clickhouse_private_ip)
+          ECS_CLUSTER=$(pulumi stack output ecs_cluster_name)
+          
+          # Get Prefect task IP
+          TASK_ARN=$(aws ecs list-tasks \
+            --cluster $ECS_CLUSTER \
+            --service-name prefect-server-service \
+            --query 'taskArns[0]' \
+            --output text)
+          
+          # Wait a bit for task to be running
+          sleep 10
+          
+          ENI_ID=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text)
+          
+          PREFECT_IP=$(aws ec2 describe-network-interfaces \
+            --network-interface-ids $ENI_ID \
+            --query 'NetworkInterfaces[0].Association.PublicIp' \
+            --output text)
+          
+          echo "prefect_ip=$PREFECT_IP" >> $GITHUB_OUTPUT
+          echo "clickhouse_ip=$CLICKHOUSE_IP" >> $GITHUB_OUTPUT
+          echo "ecs_cluster=$ECS_CLUSTER" >> $GITHUB_OUTPUT
+          
+          echo "✅ Prefect UI: http://$PREFECT_IP:4200"
+          echo "✅ ClickHouse: $CLICKHOUSE_IP"
+
+      - name: Save infrastructure info
+        run: |
+          echo "PREFECT_API_URL=http://${{ steps.get-ips.outputs.prefect_ip }}:4200/api" >> $GITHUB_ENV
+          echo "CLICKHOUSE_HOST=${{ steps.get-ips.outputs.clickhouse_ip }}" >> $GITHUB_ENV
+
+      - name: Post deployment summary
+        run: |
+          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Infrastructure Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prefect UI**: http://${{ steps.get-ips.outputs.prefect_ip }}:4200" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prefect API**: http://${{ steps.get-ips.outputs.prefect_ip }}:4200/api" >> $GITHUB_STEP_SUMMARY
+          echo "- **ClickHouse**: ${{ steps.get-ips.outputs.clickhouse_ip }}:8123" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECS Cluster**: ${{ steps.get-ips.outputs.ecs_cluster }}" >> $GITHUB_STEP_SUMMARY
+
+  configure-prefect:
+    name: Configure Prefect Work Pools
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Prefect
+        run: pip install prefect
+
+      - name: Wait for Prefect Server
+        run: |
+          PREFECT_URL="http://${{ needs.deploy-infra.outputs.prefect_public_ip }}:4200/api"
+          echo "Waiting for Prefect at $PREFECT_URL"
+          
+          for i in {1..30}; do
+            if curl -f -s "$PREFECT_URL/health" > /dev/null 2>&1; then
+              echo "✅ Prefect server is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 10
+          done
+
+      - name: Configure Prefect API
+        run: |
+          export PREFECT_API_URL=http://${{ needs.deploy-infra.outputs.prefect_public_ip }}:4200/api
+          echo "PREFECT_API_URL=$PREFECT_API_URL" >> $GITHUB_ENV
+
+      - name: Create Work Pool
+        run: |
+          export PREFECT_API_URL=http://${{ needs.deploy-infra.outputs.prefect_public_ip }}:4200/api
+          
+          # Check if work pool exists
+          if prefect work-pool ls | grep -q "ecs-pool"; then
+            echo "✅ Work pool 'ecs-pool' already exists"
+          else
+            echo "Creating work pool 'ecs-pool'..."
+            prefect work-pool create ecs-pool --type process
+            echo "✅ Work pool created"
+          fi
+
+      - name: Verify Prefect Setup
+        run: |
+          export PREFECT_API_URL=http://${{ needs.deploy-infra.outputs.prefect_public_ip }}:4200/api
+          
+          echo "### Prefect Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Work Pools" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          prefect work-pool ls >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
