@@ -47,6 +47,27 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
+      - name: Get runner IP address
+        id: runner-ip
+        uses: haythem/public-ip@v1.2
+
+      - name: Whitelist runner IP for Prefect access
+        id: whitelist
+        working-directory: ./infra
+        run: |
+          export AWS_DEFAULT_REGION=us-east-2
+          SG_ID=$(pulumi stack output sg_ecs_tasks_id)
+
+          echo "Whitelisting runner IP: ${{ steps.runner-ip.outputs.ipv4 }}/32"
+          aws ec2 authorize-security-group-ingress \
+            --group-id $SG_ID \
+            --protocol tcp \
+            --port 4200 \
+            --cidr ${{ steps.runner-ip.outputs.ipv4 }}/32 \
+            --no-cli-pager
+
+          echo "sg_id=$SG_ID" >> $GITHUB_OUTPUT
+
       - name: Get Infrastructure IPs
         id: get-ips
         working-directory: ./infra
@@ -101,6 +122,17 @@ jobs:
           echo "- **Prefect API**: http://${{ steps.get-ips.outputs.prefect_ip }}:4200/api" >> $GITHUB_STEP_SUMMARY
           echo "- **ClickHouse**: ${{ steps.get-ips.outputs.clickhouse_ip }}:8123" >> $GITHUB_STEP_SUMMARY
           echo "- **ECS Cluster**: ${{ steps.get-ips.outputs.ecs_cluster }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Revoke runner IP access
+        if: always()
+        run: |
+          export AWS_DEFAULT_REGION=us-east-2
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ steps.whitelist.outputs.sg_id }} \
+            --protocol tcp \
+            --port 4200 \
+            --cidr ${{ steps.runner-ip.outputs.ipv4 }}/32 \
+            --no-cli-pager || echo "Rule already removed or doesn't exist"
 
   configure-prefect:
     name: Configure Prefect Work Pools
