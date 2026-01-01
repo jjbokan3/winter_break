@@ -350,6 +350,51 @@ sg_prefect_ingress = aws.ec2.SecurityGroupRule(
     description="Prefect UI access",
 )
 
+# --- Service Discovery Setup ---
+# Create a private DNS namespace for internal service communication
+prefect_namespace = aws.servicediscovery.PrivateDnsNamespace(
+    "prefect-namespace",
+    name="prefect.local",
+    vpc=vpc_id,
+    description="Private DNS namespace for Prefect services",
+)
+
+# Register Prefect server for service discovery
+prefect_service_discovery = aws.servicediscovery.Service(
+    "prefect-server-discovery",
+    name="prefect-server",
+    dns_config=aws.servicediscovery.ServiceDnsConfigArgs(
+        namespace_id=prefect_namespace.id,
+        dns_records=[
+            aws.servicediscovery.ServiceDnsConfigDnsRecordArgs(
+                ttl=10,
+                type="A",
+            )
+        ],
+        routing_policy="MULTIVALUE",
+    ),
+    health_check_custom_config=aws.servicediscovery.ServiceHealthCheckCustomConfigArgs(
+        failure_threshold=1,
+    ),
+)
+
+# Update Prefect server service to register with Service Discovery
+prefect_service = aws.ecs.Service(
+    "prefect-server-service",
+    cluster=ecs_cluster.arn,
+    task_definition=prefect_task_definition.arn,
+    desired_count=1,
+    launch_type="FARGATE",
+    network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
+        assign_public_ip=associate_public_ip,
+        subnets=[subnet_id],
+        security_groups=[sg_ecs_tasks.id],
+    ),
+    service_registries=aws.ecs.ServiceServiceRegistriesArgs(
+        registry_arn=prefect_service_discovery.arn,
+    ),
+)
+
 # --- Prefect Worker Task Definition ---
 prefect_worker_task = aws.ecs.TaskDefinition(
     "prefect-worker-task",
@@ -373,7 +418,7 @@ prefect_worker_task = aws.ecs.TaskDefinition(
                 "environment": [
                     {{
                         "name": "PREFECT_API_URL",
-                        "value": "http://prefect-server.local:4200/api"
+                        "value": "http://prefect-server.prefect.local:4200/api"
                     }},
                     {{
                         "name": "CLICKHOUSE_HOST",
@@ -401,7 +446,7 @@ prefect_worker_service = aws.ecs.Service(
     desired_count=1,  # Start with 1 worker, can scale up later
     launch_type="FARGATE",
     network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
-        assign_public_ip=associate_public_ip,  # Workers need outbound internet for Docker images, etc.
+        assign_public_ip=associate_public_ip,  # Workers need outbound internet for packages
         subnets=[subnet_id],
         security_groups=[sg_ecs_tasks.id],
     ),
@@ -411,5 +456,5 @@ prefect_worker_service = aws.ecs.Service(
 pulumi.export("ecs_cluster_name", ecs_cluster.name)
 pulumi.export("prefect_service_name", prefect_service.name)
 pulumi.export("prefect_worker_service_name", prefect_worker_service.name)
+pulumi.export("prefect_internal_url", "http://prefect-server.prefect.local:4200")
 pulumi.export("prefect_ui_info", "Access Prefect UI at http://<task-ip>:4200 (check ECS console for task IP)")
-
