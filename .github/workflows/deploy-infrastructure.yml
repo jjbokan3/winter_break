@@ -13,10 +13,6 @@ jobs:
     name: Deploy Infrastructure with Pulumi
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: infra
-
     outputs:
       prefect_public_ip: ${{ steps.get-ips.outputs.prefect_ip }}
       clickhouse_private_ip: ${{ steps.get-ips.outputs.clickhouse_ip }}
@@ -27,20 +23,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
+        uses: astral-sh/setup-uv@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+        run: uv python install
 
-      - name: Install dependencies
-        run: uv pip install --system -r requirements.txt
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install Dependencies
+        run: uv sync --extra dev
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -54,7 +43,7 @@ jobs:
         with:
           command: up
           stack-name: dev
-          work-dir: infra
+          work-dir: ./infra
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
