@@ -350,7 +350,66 @@ sg_prefect_ingress = aws.ec2.SecurityGroupRule(
     description="Prefect UI access",
 )
 
+# --- Prefect Worker Task Definition ---
+prefect_worker_task = aws.ecs.TaskDefinition(
+    "prefect-worker-task",
+    family="prefect-worker",
+    network_mode="awsvpc",
+    requires_compatibilities=["FARGATE"],
+    cpu="256",  # 0.25 vCPU - workers are lightweight
+    memory="512",  # 512 MB
+    execution_role_arn=task_execution_role.arn,
+    task_role_arn=task_role.arn,
+    container_definitions=pulumi.Output.all(
+        prefect_log_group.name,
+        clickhouse_instance.private_ip
+    ).apply(
+        lambda args: f"""[
+            {{
+                "name": "prefect-worker",
+                "image": "prefecthq/prefect:2-latest",
+                "essential": true,
+                "command": ["prefect", "worker", "start", "--pool", "ecs-pool"],
+                "environment": [
+                    {{
+                        "name": "PREFECT_API_URL",
+                        "value": "http://prefect-server.local:4200/api"
+                    }},
+                    {{
+                        "name": "CLICKHOUSE_HOST",
+                        "value": "{args[1]}"
+                    }}
+                ],
+                "logConfiguration": {{
+                    "logDriver": "awslogs",
+                    "options": {{
+                        "awslogs-group": "{args[0]}",
+                        "awslogs-region": "{aws.config.region}",
+                        "awslogs-stream-prefix": "worker"
+                    }}
+                }}
+            }}
+        ]"""
+    ),
+)
+
+# --- ECS Service for Prefect Worker ---
+prefect_worker_service = aws.ecs.Service(
+    "prefect-worker-service",
+    cluster=ecs_cluster.arn,
+    task_definition=prefect_worker_task.arn,
+    desired_count=1,  # Start with 1 worker, can scale up later
+    launch_type="FARGATE",
+    network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
+        assign_public_ip=associate_public_ip,  # Workers need outbound internet for Docker images, etc.
+        subnets=[subnet_id],
+        security_groups=[sg_ecs_tasks.id],
+    ),
+)
+
 # --- Additional Outputs ---
 pulumi.export("ecs_cluster_name", ecs_cluster.name)
 pulumi.export("prefect_service_name", prefect_service.name)
+pulumi.export("prefect_worker_service_name", prefect_worker_service.name)
 pulumi.export("prefect_ui_info", "Access Prefect UI at http://<task-ip>:4200 (check ECS console for task IP)")
+
