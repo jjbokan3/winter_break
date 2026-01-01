@@ -379,7 +379,6 @@ prefect_service = aws.ecs.Service(
     service_registries=aws.ecs.ServiceServiceRegistriesArgs(
         registry_arn=prefect_service_discovery.arn,
         container_name="prefect-server",  # Add this - must match container name in task definition
-        container_port=4200,               # Add this
     ),
 )
 
