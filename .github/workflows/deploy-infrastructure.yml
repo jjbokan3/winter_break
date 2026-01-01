@@ -124,19 +124,29 @@ jobs:
       - name: Install Prefect
         run: uv pip install --system prefect
 
+
       - name: Wait for Prefect Server
         run: |
           PREFECT_URL="http://${{ needs.deploy-infra.outputs.prefect_public_ip }}:4200/api"
           echo "Waiting for Prefect at $PREFECT_URL"
-          
+          echo "Testing endpoint: $PREFECT_URL/health"
+
           for i in {1..30}; do
-            if curl -f -s "$PREFECT_URL/health" > /dev/null 2>&1; then
+            echo "Attempt $i/30..."
+            RESPONSE=$(curl -s "$PREFECT_URL/health" 2>&1)
+            echo "Response: $RESPONSE"
+
+            if echo "$RESPONSE" | grep -q "true"; then
               echo "✅ Prefect server is ready!"
-              break
+              exit 0
             fi
-            echo "Waiting... ($i/30)"
+
+            echo "Waiting..."
             sleep 10
           done
+
+          echo "❌ Prefect server failed to become ready"
+          exit 1
 
       - name: Configure Prefect API
         run: |
