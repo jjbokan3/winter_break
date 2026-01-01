@@ -26,10 +26,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install dependencies
+        run: uv pip install --system -r requirements.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -110,13 +118,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Prefect
-        run: pip install prefect
+        run: uv pip install --system prefect
 
       - name: Wait for Prefect Server
         run: |
