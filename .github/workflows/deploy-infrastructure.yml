@@ -17,6 +17,7 @@ jobs:
       prefect_public_ip: ${{ steps.get-ips.outputs.prefect_ip }}
       clickhouse_private_ip: ${{ steps.get-ips.outputs.clickhouse_ip }}
       ecs_cluster: ${{ steps.get-ips.outputs.ecs_cluster }}
+      sg_ecs_tasks_id: ${{ steps.get-ips.outputs.sg_id }}
 
     steps:
       - name: Checkout code
@@ -58,6 +59,8 @@ jobs:
           CLICKHOUSE_IP=$(pulumi stack output clickhouse_private_ip)
           ECS_CLUSTER=$(pulumi stack output ecs_cluster_name)
           SERVICE_NAME=$(pulumi stack output prefect_service_name)
+          SG_ID=$(pulumi stack output sg_ecs_tasks_id)
+
           
           # Get Prefect task IP
           TASK_ARN=$(aws ecs list-tasks \
@@ -83,6 +86,7 @@ jobs:
           echo "prefect_ip=$PREFECT_IP" >> $GITHUB_OUTPUT
           echo "clickhouse_ip=$CLICKHOUSE_IP" >> $GITHUB_OUTPUT
           echo "ecs_cluster=$ECS_CLUSTER" >> $GITHUB_OUTPUT
+          echo "sg_id=$SG_ID" >> $GITHUB_OUTPUT
           
           echo "✅ Prefect UI: http://$PREFECT_IP:4200"
           echo "✅ ClickHouse: $CLICKHOUSE_IP"
@@ -140,13 +144,10 @@ jobs:
         id: whitelist
         run: |
           export AWS_DEFAULT_REGION=us-east-2
+          SG_ID="${{ needs.deploy-infra.outputs.sg_ecs_tasks_id }}"
+
           
-          # Get security group ID from AWS (since we can't pass it between jobs easily)
-          SG_ID=$(aws ec2 describe-security-groups \
-            --filters "Name=group-name,Values=ecs-tasks-sg" \
-            --query 'SecurityGroups[0].GroupId' \
-            --output text)
-          
+          echo "Using security group: $SG_ID"
           echo "Whitelisting runner IP: ${{ steps.runner-ip.outputs.ipv4 }}/32"
           aws ec2 authorize-security-group-ingress \
             --group-id $SG_ID \
