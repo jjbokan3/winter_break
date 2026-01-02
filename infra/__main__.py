@@ -278,6 +278,25 @@ task_role = aws.iam.Role(
     }""",
 )
 
+# Add ECS Exec permissions
+ecs_exec_policy = aws.iam.RolePolicy(
+    "prefect-task-ecs-exec-policy",
+    role=task_role.name,
+    policy="""{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Action": [
+                "ssmmessages:CreateControlChannel",
+                "ssmmessages:CreateDataChannel",
+                "ssmmessages:OpenControlChannel",
+                "ssmmessages:OpenDataChannel"
+            ],
+            "Resource": "*"
+        }]
+    }""",
+)
+
 # --- Prefect Server Task Definition ---
 prefect_task_definition = aws.ecs.TaskDefinition(
     "prefect-server-task",
