@@ -61,7 +61,6 @@ jobs:
           SERVICE_NAME=$(pulumi stack output prefect_service_name)
           SG_ID=$(pulumi stack output sg_ecs_tasks_id)
 
-          
           # Get Prefect task IP
           TASK_ARN=$(aws ecs list-tasks \
             --cluster $ECS_CLUSTER \
@@ -70,7 +69,7 @@ jobs:
             --output text)
           
           # Wait a bit for task to be running
-          sleep 10
+          sleep 30
           
           ENI_ID=$(aws ecs describe-tasks \
             --cluster $ECS_CLUSTER \
