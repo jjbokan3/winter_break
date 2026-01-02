@@ -380,6 +380,8 @@ prefect_service = aws.ecs.Service(
         registry_arn=prefect_service_discovery.arn,
         container_name="prefect-server",  # Add this - must match container name in task definition
     ),
+    # This is critical - ensures proper ordering
+    opts=pulumi.ResourceOptions(depends_on=[prefect_service_discovery]),
 )
 
 
