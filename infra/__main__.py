@@ -278,25 +278,6 @@ task_role = aws.iam.Role(
     }""",
 )
 
-# Add ECS Exec permissions
-ecs_exec_policy = aws.iam.RolePolicy(
-    "prefect-task-ecs-exec-policy",
-    role=task_role.name,
-    policy="""{
-        "Version": "2012-10-17",
-        "Statement": [{
-            "Effect": "Allow",
-            "Action": [
-                "ssmmessages:CreateControlChannel",
-                "ssmmessages:CreateDataChannel",
-                "ssmmessages:OpenControlChannel",
-                "ssmmessages:OpenDataChannel"
-            ],
-            "Resource": "*"
-        }]
-    }""",
-)
-
 # --- Prefect Server Task Definition ---
 prefect_task_definition = aws.ecs.TaskDefinition(
     "prefect-server-task",
@@ -390,6 +371,7 @@ prefect_service = aws.ecs.Service(
     task_definition=prefect_task_definition.arn,
     desired_count=1,
     launch_type="FARGATE",
+    enable_execute_command=True,
     network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
         assign_public_ip=associate_public_ip,
         subnets=[subnet_id],
@@ -454,6 +436,7 @@ prefect_worker_service = aws.ecs.Service(
     task_definition=prefect_worker_task.arn,
     desired_count=1,  # Start with 1 worker, can scale up later
     launch_type="FARGATE",
+    enable_execute_command=True,
     network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
         assign_public_ip=associate_public_ip,  # Workers need outbound internet for packages
         subnets=[subnet_id],
