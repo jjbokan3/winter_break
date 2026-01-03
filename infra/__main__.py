@@ -63,7 +63,7 @@ sg_ecs_tasks = aws.ec2.SecurityGroup(
     "ecs-tasks-sg",
     description="Security group for ECS tasks (Prefect workers, API, etc.)",
     vpc_id=vpc_id,
-    # For v1: allow all outbound so tasks can reach Massive + Mongo Atlas + other HTTPS endpoints
+    # Allow all outbound
     egress=[
         aws.ec2.SecurityGroupEgressArgs(
             protocol="-1",
@@ -74,6 +74,19 @@ sg_ecs_tasks = aws.ec2.SecurityGroup(
     ],
     tags={"Name": "sg-ecs-tasks"},
 )
+
+# Allow ECS tasks to communicate with each other (self-referencing rule)
+sg_ecs_tasks_ingress = aws.ec2.SecurityGroupRule(
+    "ecs-tasks-self-ingress",
+    type="ingress",
+    from_port=0,
+    to_port=65535,
+    protocol="tcp",
+    source_security_group_id=sg_ecs_tasks.id,
+    security_group_id=sg_ecs_tasks.id,
+    description="Allow ECS tasks to communicate with each other",
+)
+
 
 # --- Security group for ClickHouse EC2 ---
 # Inbound: ONLY allow ClickHouse ports from the ECS tasks SG
