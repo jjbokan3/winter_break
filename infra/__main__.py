@@ -407,7 +407,7 @@ prefect_worker_task = aws.ecs.TaskDefinition(
                 "command": [
                     "/bin/bash",
                     "-c",
-                    "echo '=== WORKER STARTING ===' && echo 'PREFECT_API_URL: '$PREFECT_API_URL && echo 'Sleeping 30s for server to be ready...' && sleep 30 && echo 'Attempting to connect to Prefect API...' && echo 'Starting Prefect worker with verbose output...' && prefect worker start --pool ecs-pool --limit 10 2>&1"
+                    "echo '=== INSTALLING DIAGNOSTIC TOOLS ===' && apt-get update -qq && apt-get install -y -qq curl dnsutils iputils-ping netcat-traditional && echo '=== WORKER STARTING ===' && echo 'PREFECT_API_URL: '$PREFECT_API_URL && echo 'Testing DNS resolution...' && nslookup prefect-server.prefect.local && echo 'Testing ping...' && ping -c 3 prefect-server.prefect.local || echo 'Ping failed' && echo 'Testing port 4200 connectivity...' && nc -zv prefect-server.prefect.local 4200 || echo 'Port 4200 unreachable' && echo 'Testing HTTP request...' && curl -v --connect-timeout 5 http://prefect-server.prefect.local:4200/api/health || echo 'HTTP request failed' && echo 'Sleeping 30s...' && sleep 30 && echo 'Starting Prefect worker...' && prefect worker start --pool ecs-pool 2>&1"
                 ],
                 "environment": [
                     {{
