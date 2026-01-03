@@ -385,15 +385,14 @@ prefect_service = aws.ecs.Service(
     opts=pulumi.ResourceOptions(depends_on=[prefect_service_discovery]),
 )
 
-
 # --- Prefect Worker Task Definition ---
 prefect_worker_task = aws.ecs.TaskDefinition(
     "prefect-worker-task",
     family="prefect-worker",
     network_mode="awsvpc",
     requires_compatibilities=["FARGATE"],
-    cpu="256",  # 0.25 vCPU - workers are lightweight
-    memory="512",  # 512 MB
+    cpu="256",
+    memory="512",
     execution_role_arn=task_execution_role.arn,
     task_role_arn=task_role.arn,
     container_definitions=pulumi.Output.all(
@@ -405,7 +404,11 @@ prefect_worker_task = aws.ecs.TaskDefinition(
                 "name": "prefect-worker",
                 "image": "prefecthq/prefect:2-latest",
                 "essential": true,
-                "command": ["prefect", "worker", "start", "--pool", "ecs-pool"],
+                "command": [
+                    "/bin/bash",
+                    "-c",
+                    "echo '=== WORKER STARTING ===' && echo 'PREFECT_API_URL: '$PREFECT_API_URL && echo 'Sleeping 30s for server to be ready...' && sleep 30 && echo 'Testing DNS resolution...' && nslookup prefect-server.prefect.local || echo 'DNS failed' && echo 'Testing API connection...' && curl -v http://prefect-server.prefect.local:4200/api/health || echo 'API connection failed' && echo 'Starting Prefect worker...' && prefect worker start --pool ecs-pool -v"
+                ],
                 "environment": [
                     {{
                         "name": "PREFECT_API_URL",
