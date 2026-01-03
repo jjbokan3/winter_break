@@ -407,7 +407,7 @@ prefect_worker_task = aws.ecs.TaskDefinition(
                 "command": [
                     "/bin/bash",
                     "-c",
-                    "echo '=== WORKER STARTING ===' && echo 'PREFECT_API_URL: '$PREFECT_API_URL && echo 'Sleeping 30s for server to be ready...' && sleep 30 && echo 'Testing DNS resolution...' && nslookup prefect-server.prefect.local || echo 'DNS failed' && echo 'Testing API connection...' && curl -v http://prefect-server.prefect.local:4200/api/health || echo 'API connection failed' && echo 'Starting Prefect worker...' && prefect worker start --pool ecs-pool -v"
+                    "echo '=== WORKER STARTING ===' && echo 'PREFECT_API_URL: '$PREFECT_API_URL && echo 'Sleeping 30s for server to be ready...' && sleep 30 && echo 'Attempting to connect to Prefect API...' && echo 'Starting Prefect worker with verbose output...' && prefect worker start --pool ecs-pool --limit 10 2>&1"
                 ],
                 "environment": [
                     {{
@@ -417,6 +417,10 @@ prefect_worker_task = aws.ecs.TaskDefinition(
                     {{
                         "name": "CLICKHOUSE_HOST",
                         "value": "{args[1]}"
+                    }},
+                    {{
+                        "name": "PREFECT_LOGGING_LEVEL",
+                        "value": "DEBUG"
                     }}
                 ],
                 "logConfiguration": {{
