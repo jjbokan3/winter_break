@@ -9,6 +9,10 @@ ssh_cidr = config.get("sshCidr") or "72.76.166.39/32"  # <-- change this; 0.0.0.
 key_name = config.get("keyName")                  # optional: EC2 KeyPair name if you want SSH
 subnet_id = config.get("subnetId")                # required
 vpc_id = config.get("vpcId")                      # required
+# Get ClickHouse config from Pulumi.dev.yaml
+ch_user = config.get("clickhouseUser") or "default"
+ch_password = config.require_secret("clickhousePassword")
+ch_db = config.get("clickhouseDb") or "default"
 
 # Optional: if you want the EC2 to have a public IP (useful for SSH)
 associate_public_ip = config.get_bool("associatePublicIp") or False
@@ -190,17 +194,26 @@ grep -q "${UUID}" /etc/fstab || echo "UUID=${UUID} /var/lib/clickhouse ext4 defa
 mount -a
 
 echo "Mounted ${DATA_DISK} at /var/lib/clickhouse"
-
-# Add this to start ClickHouse
-    docker run -d \
-      --name clickhouse-server \
-      --restart always \
-      -p 8123:8123 \
-      -p 9000:9000 \
-      --ulimit nofile=262144:262144 \
-      -v /var/lib/clickhouse:/var/lib/clickhouse \
-      clickhouse/clickhouse-server
 """
+
+# Add this to start ClickHouse with specific user/pass/db
+# We use pulumi.Output.all().apply() to inject the secrets into the script safely
+# Update the clickhouse_instance definition to use these values
+user_data_output = pulumi.Output.all(ch_user, ch_password, ch_db).apply(
+    lambda args: f"""{user_data}
+    docker run -d \\
+      --name clickhouse-server \\
+      --restart always \\
+      -p 8123:8123 \\
+      -p 9000:9000 \\
+      --ulimit nofile=262144:262144 \\
+      -e CLICKHOUSE_USER={args[0]} \\
+      -e CLICKHOUSE_PASSWORD={args[1]} \\
+      -e CLICKHOUSE_DB={args[2]} \\
+      -v /var/lib/clickhouse:/var/lib/clickhouse \\
+      clickhouse/clickhouse-server
+    """
+)
 
 # --- EC2 instance ---
 clickhouse_instance = aws.ec2.Instance(
@@ -211,7 +224,7 @@ clickhouse_instance = aws.ec2.Instance(
     vpc_security_group_ids=[sg_clickhouse.id],
     associate_public_ip_address=associate_public_ip,
     key_name=key_name,
-    user_data=user_data,
+    user_data=user_data_output,
     tags={"Name": "clickhouse-ec2"},
 )
 

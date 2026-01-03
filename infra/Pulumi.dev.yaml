@@ -5,3 +5,7 @@ config:
   winter-project:associatePublicIp: "true"
   winter-project:clickhouseDataVolumeGb: "75"
   winter-project:keyName: clickhouse-key-2026
+  winter-project:clickhousePassword:
+    secure: AAABAABQSU8qBCTqQslLBRebyMECv9wx37Bp7X0VlAYxYBYxkZjNnpRt1Cfnk+ds6RA=
+  winter-project:clickhouseUser: app
+  winter-project:clickhouseDb: market
