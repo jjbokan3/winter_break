@@ -118,6 +118,15 @@ if ssh_cidr and ssh_cidr != "0.0.0.0/0":
             description="SSH from your IP only",
         )
     )
+    ingress_rules.append(
+        aws.ec2.SecurityGroupIngressArgs(
+            protocol="tcp",
+            from_port=8123,
+            to_port=8123,
+            cidr_blocks=[ssh_cidr],
+            description="ClickHouse HTTP from your IP only",
+        )
+    )
 
 sg_clickhouse = aws.ec2.SecurityGroup(
     "clickhouse-sg",
