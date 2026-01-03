@@ -198,12 +198,6 @@ clickhouse_instance = aws.ec2.Instance(
     "clickhouse-ec2",
     ami=ami.id,
     instance_type="t3.small",
-    instance_market_options=aws.ec2.InstanceInstanceMarketOptionsArgs(
-        market_type="spot",
-        spot_options=aws.ec2.InstanceInstanceMarketOptionsSpotOptionsArgs(
-            max_price="0.010",
-        ),
-    ),
     subnet_id=subnet_id,
     vpc_security_group_ids=[sg_clickhouse.id],
     associate_public_ip_address=associate_public_ip,
