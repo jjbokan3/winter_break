@@ -442,6 +442,7 @@ prefect_worker_service = aws.ecs.Service(
         subnets=[subnet_id],
         security_groups=[sg_ecs_tasks.id],
     ),
+    opts=pulumi.ResourceOptions(depends_on=[prefect_service, prefect_service_discovery]),
 )
 
 # --- Additional Outputs ---
