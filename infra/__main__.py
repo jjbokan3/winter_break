@@ -181,6 +181,16 @@ grep -q "${UUID}" /etc/fstab || echo "UUID=${UUID} /var/lib/clickhouse ext4 defa
 mount -a
 
 echo "Mounted ${DATA_DISK} at /var/lib/clickhouse"
+
+# Add this to start ClickHouse
+    docker run -d \
+      --name clickhouse-server \
+      --restart always \
+      -p 8123:8123 \
+      -p 9000:9000 \
+      --ulimit nofile=262144:262144 \
+      -v /var/lib/clickhouse:/var/lib/clickhouse \
+      clickhouse/clickhouse-server
 """
 
 # --- EC2 instance ---
